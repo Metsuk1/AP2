@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  orders-db:
+    image: postgres:16-alpine
+    container_name: orders-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0000
+      POSTGRES_DB: ordersAP2_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - orders-data:/var/lib/postgresql/data
+      - ./order-service/migrations/001_create_orders.sql:/docker-entrypoint-initdb.d/001_create_orders.sql
+
+  payments-db:
+    image: postgres:16-alpine
+    container_name: payments-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0000
+      POSTGRES_DB: paymentsAP2_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - payments-data:/var/lib/postgresql/data
+      - ./payment-service/migrations/001_create_payments.sql:/docker-entrypoint-initdb.d/001_create_payments.sql
+
+volumes:
+  orders-data:
+  payments-data:
