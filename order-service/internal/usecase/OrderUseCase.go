@@ -45,7 +45,7 @@ func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, i
 		return nil, err
 	}
 
-	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount)
+	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount, idempotencyKey)
 	if err != nil {
 		order.Status = "Failed"
 		uc.repo.UpdateStatus(order.ID, order.Status)

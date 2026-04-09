@@ -20,5 +20,5 @@ type OrderRepository interface {
 }
 
 type PaymentClient interface {
-	RequestPayment(orderID string, amount int64) (string, error)
+	RequestPayment(orderID string, amount int64, idempotencyKey string) (string, error)
 }

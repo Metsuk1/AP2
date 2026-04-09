@@ -14,6 +14,7 @@ import (
 	"order-service/internal/database"
 	repo "order-service/internal/repository/postgres"
 	handler "order-service/internal/transport/http"
+	grpc "order-service/internal/transport/http/grpc"
 	"order-service/internal/usecase"
 )
 
@@ -26,7 +27,12 @@ func main() {
 
 	//dependency
 	orderRepo := repo.NewOrderRepo(db)
-	paymentClient := handler.NewPaymentClient("http://localhost:8081")
+	paymentClient, err := grpc.NewPaymentClient("localhost:50051")
+	if err != nil {
+		log.Fatalf("failed to create payment client: %v", err)
+	}
+	defer paymentClient.Close()
+
 	orderUC := usecase.NewOrderUseCase(orderRepo, paymentClient)
 	orderHandler := handler.NewOrderHandler(orderUC)
 
