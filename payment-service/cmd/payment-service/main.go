@@ -1,20 +1,21 @@
 package main
 
 import (
-	"context"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	"os/signal"
+	payment_grpc "payment-service/internal/transport/http/grpc"
 	"syscall"
-	"time"
 
-	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"payment-service/internal/database"
 	repo "payment-service/internal/repository/postgres"
-	handler "payment-service/internal/transport/http"
 	"payment-service/internal/usecase"
+
+	"github.com/Metsuk1/AP2_Generated/payment"
 )
 
 func main() {
@@ -24,37 +25,38 @@ func main() {
 	}
 	defer db.Close()
 
-	// dependency
 	paymentRepo := repo.NewPaymentRepo(db)
 	paymentUC := usecase.NewPaymentUseCase(paymentRepo)
-	paymentHandler := handler.NewPaymentHandler(paymentUC)
 
-	router := gin.Default()
-	handler.RegisterRoutes(router, paymentHandler)
+	paymentGRPCHandler := payment_grpc.NewPaymentGRPCHandler(paymentUC)
 
-	srv := &http.Server{
-		Addr:    ":8081",
-		Handler: router,
+	port := os.Getenv("GRPC_PORT")
+	if port == "" {
+		port = "50051"
 	}
 
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	srv := grpc.NewServer()
+	payment.RegisterPaymentServiceServer(srv, paymentGRPCHandler)
+
+	reflection.Register(srv)
+
 	go func() {
-		log.Println("Payment Service starting on :8081")
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("failed to start server:", err)
+		log.Printf("Payment gRPC Service starting on :%s", port)
+		if err := srv.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down Payment Service...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("server forced to shutdown:", err)
-	}
-
-	log.Println("Payment Service stopped")
+	log.Println("Shutdown payment service..")
+	srv.GracefulStop()
+	log.Println("Payment-service is stopped")
 }
