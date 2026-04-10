@@ -1,9 +1,9 @@
 module order-service
 
-go 1.25.0
+go 1.25.9
 
 require (
-	github.com/Metsuk1/AP2_Generated v0.0.0-20260409155227-5c6b81a33d1a
+	github.com/Metsuk1/AP2_Generated v0.0.0-20260409174542-973a300336e9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.1

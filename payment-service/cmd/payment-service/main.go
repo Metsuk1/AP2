@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	db, err := database.Connect("localhost", 5434, "postgres", "0000", "paymentsAP2_db")
+	db, err := database.Connect("localhost", 5432, "postgres", "0000", "paymentsAP2_db")
 	if err != nil {
 		log.Fatal("failed to connect to database:", err)
 	}

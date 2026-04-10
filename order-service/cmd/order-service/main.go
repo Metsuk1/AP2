@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	db, err := database.Connect("localhost", 5433, "postgres", "0000", "ordersAP2_db")
+	db, err := database.Connect("localhost", 5432, "postgres", "0000", "ordersAP2_db")
 	if err != nil {
 		log.Fatal("failed to connect to database:", err)
 	}
@@ -27,6 +27,7 @@ func main() {
 
 	//dependency
 	orderRepo := repo.NewOrderRepo(db)
+
 	paymentClient, err := grpc.NewPaymentClient("localhost:50051")
 	if err != nil {
 		log.Fatalf("failed to create payment client: %v", err)

@@ -1,5 +1,7 @@
 github.com/Metsuk1/AP2_Generated v0.0.0-20260409155227-5c6b81a33d1a h1:hS+RkaXCGM41z+4b9W4g3/SLk6jbxQnFop7hh4qNgac=
 github.com/Metsuk1/AP2_Generated v0.0.0-20260409155227-5c6b81a33d1a/go.mod h1:bGu8YNJX0iNz/5ZhLAhgihYkzhijyQ/7DHEJyGHZV9E=
+github.com/Metsuk1/AP2_Generated v0.0.0-20260409174542-973a300336e9 h1:BOrJG6h0LulBOxViSsKeFwvnpBojy6xDGHBdo08txzU=
+github.com/Metsuk1/AP2_Generated v0.0.0-20260409174542-973a300336e9/go.mod h1:/g1HZmIYPWMCXiUF68ciZdaH1Rkw/klN5m4DPT0PaFA=
 github.com/bytedance/gopkg v0.1.3 h1:TPBSwH8RsouGCBcMBktLt1AymVo2TVsBVCY4b6TnZ/M=
 github.com/bytedance/gopkg v0.1.3/go.mod h1:576VvJ+eJgyCzdjS+c4+77QF3p7ubbtiKARP3TxducM=
 github.com/bytedance/sonic v1.15.0 h1:/PXeWFaR5ElNcVE84U0dOHjiMHQOwNIx3K4ymzh/uSE=
