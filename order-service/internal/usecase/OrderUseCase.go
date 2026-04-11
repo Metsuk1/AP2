@@ -12,10 +12,15 @@ import (
 type OrderUseCase struct {
 	repo    domain.OrderRepository
 	payment domain.PaymentClient
+	Broker  *OrderUpdatesBroker
 }
 
-func NewOrderUseCase(repo domain.OrderRepository, payment domain.PaymentClient) *OrderUseCase {
-	return &OrderUseCase{repo: repo, payment: payment}
+func NewOrderUseCase(repo domain.OrderRepository, payment domain.PaymentClient, broker *OrderUpdatesBroker) *OrderUseCase {
+	return &OrderUseCase{
+		repo:    repo,
+		payment: payment,
+		Broker:  broker,
+	}
 }
 
 func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, idempotencyKey string) (*domain.Order, error) {
@@ -45,10 +50,10 @@ func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, i
 		return nil, err
 	}
 
-	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount)
+	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount, idempotencyKey)
 	if err != nil {
 		order.Status = "Failed"
-		uc.repo.UpdateStatus(order.ID, order.Status)
+		uc.UpdateStatus(order.ID, order.Status)
 		return order, nil
 	}
 
@@ -57,7 +62,7 @@ func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, i
 	} else {
 		order.Status = "Failed"
 	}
-	uc.repo.UpdateStatus(order.ID, order.Status)
+	uc.UpdateStatus(order.ID, order.Status)
 
 	return order, nil
 }
@@ -81,9 +86,20 @@ func (uc *OrderUseCase) CancelOrder(id string) (*domain.Order, error) {
 	}
 
 	order.Status = "Cancelled"
-	if err := uc.repo.UpdateStatus(order.ID, order.Status); err != nil {
+	if err := uc.UpdateStatus(order.ID, order.Status); err != nil {
 		return nil, err
 	}
 
 	return order, nil
+}
+
+func (uc *OrderUseCase) UpdateStatus(orderID, status string) error {
+	if err := uc.repo.UpdateStatus(orderID, status); err != nil {
+		return err
+	}
+	if uc.Broker != nil {
+		uc.Broker.Notify(orderID, status)
+	}
+
+	return nil
 }
