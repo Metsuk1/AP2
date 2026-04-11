@@ -3,18 +3,22 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	pb "github.com/Metsuk1/AP2_Generated/order"
 	"github.com/gin-gonic/gin"
+
+	googleGrpc "google.golang.org/grpc"
 
 	"order-service/internal/database"
 	repo "order-service/internal/repository/postgres"
 	handler "order-service/internal/transport/http"
-	grpc "order-service/internal/transport/http/grpc"
+	myGrpc "order-service/internal/transport/http/grpc"
 	"order-service/internal/usecase"
 )
 
@@ -25,20 +29,38 @@ func main() {
 	}
 	defer db.Close()
 
+	//create broker
+	broker := usecase.NewOrderUpdatesBroker()
+
 	//dependency
 	orderRepo := repo.NewOrderRepo(db)
 
-	paymentClient, err := grpc.NewPaymentClient("localhost:50051")
+	paymentClient, err := myGrpc.NewPaymentClient("localhost:50051")
 	if err != nil {
 		log.Fatalf("failed to create payment client: %v", err)
 	}
 	defer paymentClient.Close()
 
-	orderUC := usecase.NewOrderUseCase(orderRepo, paymentClient)
+	orderUC := usecase.NewOrderUseCase(orderRepo, paymentClient, broker)
 	orderHandler := handler.NewOrderHandler(orderUC)
 
 	router := gin.Default()
 	handler.RegisterRoutes(router, orderHandler)
+
+	go func() {
+		lis, err := net.Listen("tcp", ":50052")
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+
+		s := googleGrpc.NewServer()
+		pb.RegisterOrderServiceServer(s, myGrpc.NewOrderGRPCServer(orderUC))
+
+		log.Println("Order gRPC Server listening on :50052")
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:    ":8080",
