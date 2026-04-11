@@ -12,7 +12,7 @@ import (
 
 	pb "github.com/Metsuk1/AP2_Generated/order"
 	"github.com/gin-gonic/gin"
-
+	"github.com/joho/godotenv"
 	googleGrpc "google.golang.org/grpc"
 
 	"order-service/internal/database"
@@ -22,8 +22,27 @@ import (
 	"order-service/internal/usecase"
 )
 
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+
+	return fallback
+}
+
 func main() {
-	db, err := database.Connect("localhost", 5432, "postgres", "0000", "ordersAP2_db")
+
+	_ = godotenv.Load()
+
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbUser := getEnv("DB_USER", "postgres")
+	dbPass := getEnv("DB_PASSWORD", "0000")
+	dbName := getEnv("DB_NAME", "ordersAP2_db")
+	paymentGrpcUrl := getEnv("PAYMENT_GRPC_URL", "localhost:50051")
+	grpcPort := getEnv("GRPC_PORT", "50052")
+	restPort := getEnv("REST_PORT", "8080")
+
+	db, err := database.Connect(dbHost, 5432, dbUser, dbPass, dbName)
 	if err != nil {
 		log.Fatal("failed to connect to database:", err)
 	}
@@ -35,7 +54,7 @@ func main() {
 	//dependency
 	orderRepo := repo.NewOrderRepo(db)
 
-	paymentClient, err := myGrpc.NewPaymentClient("localhost:50051")
+	paymentClient, err := myGrpc.NewPaymentClient(paymentGrpcUrl)
 	if err != nil {
 		log.Fatalf("failed to create payment client: %v", err)
 	}
@@ -48,7 +67,7 @@ func main() {
 	handler.RegisterRoutes(router, orderHandler)
 
 	go func() {
-		lis, err := net.Listen("tcp", ":50052")
+		lis, err := net.Listen("tcp", ":"+grpcPort)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
@@ -56,14 +75,14 @@ func main() {
 		s := googleGrpc.NewServer()
 		pb.RegisterOrderServiceServer(s, myGrpc.NewOrderGRPCServer(orderUC))
 
-		log.Println("Order gRPC Server listening on :50052")
+		log.Printf("Order gRPC Server listening on :%s\n", grpcPort)
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":" + restPort,
 		Handler: router,
 	}
 

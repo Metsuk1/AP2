@@ -8,6 +8,7 @@ import (
 	payment_grpc "payment-service/internal/transport/http/grpc"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -18,8 +19,23 @@ import (
 	"github.com/Metsuk1/AP2_Generated/payment"
 )
 
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
+}
+
 func main() {
-	db, err := database.Connect("localhost", 5432, "postgres", "0000", "paymentsAP2_db")
+	_ = godotenv.Load()
+
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbUser := getEnv("DB_USER", "postgres")
+	dbPass := getEnv("DB_PASSWORD", "0000")
+	dbName := getEnv("DB_NAME", "paymentsAP2_db")
+	grpcPort := getEnv("GRPC_PORT", "50051")
+
+	db, err := database.Connect(dbHost, 5432, dbUser, dbPass, dbName)
 	if err != nil {
 		log.Fatal("failed to connect to database:", err)
 	}
@@ -30,12 +46,7 @@ func main() {
 
 	paymentGRPCHandler := payment_grpc.NewPaymentGRPCHandler(paymentUC)
 
-	port := os.Getenv("GRPC_PORT")
-	if port == "" {
-		port = "50051"
-	}
-
-	lis, err := net.Listen("tcp", ":"+port)
+	lis, err := net.Listen("tcp", ":"+grpcPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -46,7 +57,7 @@ func main() {
 	reflection.Register(srv)
 
 	go func() {
-		log.Printf("Payment gRPC Service starting on :%s", port)
+		log.Printf("Payment gRPC Service starting on :%s", grpcPort)
 		if err := srv.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}

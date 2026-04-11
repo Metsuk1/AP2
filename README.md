@@ -1,82 +1,57 @@
-# AP2 Assignment 1 — Order & Payment Microservices
+# AP2 Assignment — Order & Payment Microservices (gRPC & Streaming)
 
-Two microservices built with Go, Gin, and PostgreSQL following Clean Architecture.
+Two microservices built with Go, Gin, and PostgreSQL, now communicating via **gRPC** and using a **Contract-First** approach.
 
-## Architecture
+## 🔗 Proto Repositories (Deliverable 2)
 
-```
-order-service (port 8080)  --->  payment-service (port 8081)
-      |                                |
-  orders-db (5433)               payments-db (5434)
-```
+- **Repo A (Protos):** https://github.com/Metsuk1/ProtocolAP2
+- **Repo B (Generated):** [https://github.com/Metsuk1/AP2_Generated](https://github.com/Metsuk1/AP2_Generated) - *automatically published by GitHub Actions*
 
-Each service has its own PostgreSQL database. Order Service calls Payment Service via HTTP to process payments
+## 🏗️ Architecture (Deliverable 3)
 
-## Project Structure
+![img_4.png](img_4.png)
 
-```
-├── docker-compose.yml
-├── order-service/
-│   ├── cmd/order-service/main.go
-│   ├── internal/
-│   │   ├── domain/          # entities, repository & client interfaces
-│   │   ├── usecase/         # business logic
-│   │   ├── repository/      # PostgreSQL implementation
-│   │   └── transport/http/  # handlers, routes, payment client
-│   └── migrations/
-└── payment-service/
-    ├── cmd/payment-service/main.go
-    ├── internal/
-    │   ├── domain/
-    │   ├── usecase/
-    │   ├── repository/
-    │   └── transport/http/
-    └── migrations/
-```
+## 🚀 How to Run
 
-## How to Run
-
-1. Start databases:
+1. **Start Databases:**
 ```bash
 docker-compose up -d
 ```
 
-2. Run Payment Service:
+2. **Setup Configurations:**
+Ensure `.env` files exist in both `order-service` and `payment-service` with appropriate `DB_*` and `GRPC_PORT` variables.
+
+3. **Run Payment Service (gRPC Server):**
 ```bash
 cd payment-service
 go run cmd/payment-service/main.go
+# Starts on :50051
 ```
 
-3. Run Order Service:
+4. **Run Order Service (REST + gRPC StreamServer):**
 ```bash
 cd order-service
 go run cmd/order-service/main.go
+# REST starts on :8080, gRPC server on :50052
 ```
 
-## API Endpoints
-Order Service 8080 port
- POST - /orders - Create order          
- GET  -/orders/:id - Get order by id                
- PATCH - /orders/:id/cancel -Cancel order
+##  Testing the gRPC Streaming 
+
+To demonstrate Server-side Streaming (Order Tracking):
+1. **Run the Streaming Client** in a separate terminal:
+   ```bash
+   cd order-service
+   go run cmd/test-client/main.go <ORDER_ID>
+   ```
+2. **Trigger a status update** via Postman REST API:
+   ```http
+   PATCH http://localhost:8080/orders/<ORDER_ID>/cancel
+   ```
+3. Watch the client terminal instantly pick up the pushed `Cancelled` status via gRPC.
+
+##  Evidences 
+
+![img_5.png](img_5.png)
 
 
-Payment Service 8081 port       
-POST -/payments - Create payment        
-GET - /payments/:order_id -Get payment by order
-
-
-## Screenshots
-
-When payments-service unavailable: 
-![img.png](img.png)
-    
-
-
-Succesfully Create Order:
-![img_1.png](img_1.png)
-
-Get By Id ORder:
-![img_2.png](img_2.png)
-
-Diagram:
-![img_3.png](img_3.png)
+![img_6.png](img_6.png)
