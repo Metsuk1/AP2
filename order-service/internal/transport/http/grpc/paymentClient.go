@@ -31,7 +31,7 @@ func (pc *PaymentClient) Close() {
 	pc.conn.Close()
 }
 
-func (pc *PaymentClient) RequestPayment(orderID string, amount int64, idempotencyKey string) (string, error) {
+func (pc *PaymentClient) RequestPayment(orderID string, amount int64, idempotencyKey string, customerEmail string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -39,6 +39,7 @@ func (pc *PaymentClient) RequestPayment(orderID string, amount int64, idempotenc
 		OrderId:        orderID,
 		Amount:         amount,
 		IdempotencyKey: idempotencyKey,
+		CustomerEmail:  customerEmail,
 	})
 
 	if err != nil {

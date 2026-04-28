@@ -20,8 +20,8 @@ func (repo *OrderRepo) Create(o *domain.Order) error {
 		idempotencyKey = o.IdempotencyKey
 	}
 
-	_, err := repo.db.Exec("INSERT INTO orders (id, customer_id, item_name, amount, status, idempotency_key, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		o.ID, o.CustomerID, o.ItemName, o.Amount, o.Status, idempotencyKey, o.CreatedAt)
+	_, err := repo.db.Exec("INSERT INTO orders (id, customer_id, customer_email, item_name, amount, status, idempotency_key, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		o.ID, o.CustomerID, o.CustomerEmail, o.ItemName, o.Amount, o.Status, idempotencyKey, o.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create Order: %w", err)
 	}
@@ -30,11 +30,11 @@ func (repo *OrderRepo) Create(o *domain.Order) error {
 }
 
 func (repo *OrderRepo) GetByID(id string) (*domain.Order, error) {
-	row := repo.db.QueryRow("SELECT id, customer_id, item_name, amount, status, idempotency_key, created_at FROM orders WHERE id=$1", id)
+	row := repo.db.QueryRow("SELECT id, customer_id, customer_email, item_name, amount, status, idempotency_key, created_at FROM orders WHERE id=$1", id)
 
 	var o domain.Order
 	var idemKey sql.NullString
-	err := row.Scan(&o.ID, &o.CustomerID, &o.ItemName, &o.Amount, &o.Status, &idemKey, &o.CreatedAt)
+	err := row.Scan(&o.ID, &o.CustomerID, &o.CustomerEmail, &o.ItemName, &o.Amount, &o.Status, &idemKey, &o.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Order: %w", err)
 	}
@@ -53,11 +53,11 @@ func (repo *OrderRepo) UpdateStatus(id string, status string) error {
 }
 
 func (repo *OrderRepo) GetByIdempotencyKey(key string) (*domain.Order, error) {
-	row := repo.db.QueryRow("SELECT id, customer_id, item_name, amount, status, idempotency_key, created_at FROM orders WHERE idempotency_key=$1", key)
+	row := repo.db.QueryRow("SELECT id, customer_id, customer_email, item_name, amount, status, idempotency_key, created_at FROM orders WHERE idempotency_key=$1", key)
 
 	var o domain.Order
 	var idemKey sql.NullString
-	err := row.Scan(&o.ID, &o.CustomerID, &o.ItemName, &o.Amount, &o.Status, &idemKey, &o.CreatedAt)
+	err := row.Scan(&o.ID, &o.CustomerID, &o.CustomerEmail, &o.ItemName, &o.Amount, &o.Status, &idemKey, &o.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Order by idempotency key: %w", err)
 	}

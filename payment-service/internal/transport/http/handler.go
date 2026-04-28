@@ -17,8 +17,9 @@ func NewPaymentHandler(uc *usecase.PaymentUseCase) *PaymentHandler {
 }
 
 type createPaymentRequest struct {
-	OrderID string `json:"order_id" binding:"required"`
-	Amount  int64  `json:"amount" binding:"required"`
+	OrderID       string `json:"order_id" binding:"required"`
+	Amount        int64  `json:"amount" binding:"required"`
+	CustomerEmail string `json:"customer_email" binding:"required,email"`
 }
 
 // POST /payments
@@ -30,7 +31,7 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	}
 
 	idempotencyKey := c.GetHeader("Idempotency-Key")
-	payment, err := h.uc.CreatePayment(req.OrderID, req.Amount, idempotencyKey)
+	payment, err := h.uc.CreatePayment(req.OrderID, req.Amount, idempotencyKey, req.CustomerEmail)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return

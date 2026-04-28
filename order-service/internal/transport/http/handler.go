@@ -17,12 +17,12 @@ func NewOrderHandler(uc *usecase.OrderUseCase) *OrderHandler {
 }
 
 type createOrderRequest struct {
-	CustomerID string `json:"customer_id" binding:"required"`
-	ItemName   string `json:"item_name" binding:"required"`
-	Amount     int64  `json:"amount" binding:"required"`
+	CustomerID    string `json:"customer_id" binding:"required"`
+	CustomerEmail string `json:"customer_email" binding:"required,email"`
+	ItemName      string `json:"item_name" binding:"required"`
+	Amount        int64  `json:"amount" binding:"required"`
 }
 
-// POST /orders
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	var req createOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -31,9 +31,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	}
 
 	idempotencyKey := c.GetHeader("Idempotency-Key")
-	order, err := h.uc.CreateOrder(req.CustomerID, req.ItemName, req.Amount, idempotencyKey)
+	order, err := h.uc.CreateOrder(req.CustomerID, req.CustomerEmail, req.ItemName, req.Amount, idempotencyKey)
 	if err != nil {
-		// Payment Service unavailable -> 503
 		if err.Error() == "payment service unavailable" {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return
@@ -45,7 +44,6 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	c.JSON(http.StatusCreated, order)
 }
 
-// GET /orders/:id
 func (h *OrderHandler) GetOrder(c *gin.Context) {
 	id := c.Param("id")
 
@@ -58,7 +56,6 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, order)
 }
 
-// PATCH /orders/:id/cancel
 func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	id := c.Param("id")
 
