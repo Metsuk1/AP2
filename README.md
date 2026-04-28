@@ -189,13 +189,3 @@ docker-compose up orders-db payments-db nats
 
 Then run services manually in separate terminals if needed.
 
-## Notes for Defense
-
-Main points to demonstrate:
-
-- Order to Payment is still synchronous gRPC.
-- Payment to Notification is asynchronous through NATS JetStream.
-- `notification-service` does not call Order or Payment directly.
-- `customer_email` is part of the proto contract.
-- Manual ACK is sent only after successful processing.
-- Duplicate events are filtered by `event_id`.
