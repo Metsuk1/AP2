@@ -9,14 +9,15 @@ import (
 )
 
 type PaymentUseCase struct {
-	repo domain.PaymentRepository
+	repo      domain.PaymentRepository
+	publisher domain.PaymentEventPublisher
 }
 
-func NewPaymentUseCase(repo domain.PaymentRepository) *PaymentUseCase {
-	return &PaymentUseCase{repo: repo}
+func NewPaymentUseCase(repo domain.PaymentRepository, publisher domain.PaymentEventPublisher) *PaymentUseCase {
+	return &PaymentUseCase{repo: repo, publisher: publisher}
 }
 
-func (uc *PaymentUseCase) CreatePayment(orderID string, amount int64, idempotencyKey string) (*domain.Payment, error) {
+func (uc *PaymentUseCase) CreatePayment(orderID string, amount int64, idempotencyKey string, customerEmail string) (*domain.Payment, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than 0")
 	}
@@ -44,6 +45,19 @@ func (uc *PaymentUseCase) CreatePayment(orderID string, amount int64, idempotenc
 
 	if err := uc.repo.Create(payment); err != nil {
 		return nil, err
+	}
+
+	if payment.Status == "Authorized" && uc.publisher != nil {
+		event := domain.PaymentCompletedEvent{
+			EventID:       payment.ID,
+			OrderID:       payment.OrderID,
+			Amount:        payment.Amount,
+			CustomerEmail: customerEmail,
+			Status:        payment.Status,
+		}
+		if err := uc.publisher.PublishPaymentCompleted(event); err != nil {
+			return nil, err
+		}
 	}
 
 	return payment, nil

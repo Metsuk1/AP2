@@ -9,10 +9,12 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"payment-service/internal/database"
+	"payment-service/internal/messaging"
 	repo "payment-service/internal/repository/postgres"
 	"payment-service/internal/usecase"
 
@@ -34,6 +36,7 @@ func main() {
 	dbPass := getEnv("DB_PASSWORD", "0000")
 	dbName := getEnv("DB_NAME", "paymentsAP2_db")
 	grpcPort := getEnv("GRPC_PORT", "50051")
+	natsURL := getEnv("NATS_URL", nats.DefaultURL)
 
 	db, err := database.Connect(dbHost, 5432, dbUser, dbPass, dbName)
 	if err != nil {
@@ -42,7 +45,13 @@ func main() {
 	defer db.Close()
 
 	paymentRepo := repo.NewPaymentRepo(db)
-	paymentUC := usecase.NewPaymentUseCase(paymentRepo)
+	publisher, err := messaging.NewNATSPublisher(natsURL)
+	if err != nil {
+		log.Fatal("failed to connect to nats:", err)
+	}
+	defer publisher.Close()
+
+	paymentUC := usecase.NewPaymentUseCase(paymentRepo, publisher)
 
 	paymentGRPCHandler := payment_grpc.NewPaymentGRPCHandler(paymentUC)
 

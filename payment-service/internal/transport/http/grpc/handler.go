@@ -19,7 +19,12 @@ func NewPaymentGRPCHandler(uc *usecase.PaymentUseCase) *PaymentGRPCHandler {
 }
 
 func (h *PaymentGRPCHandler) ProcessPayment(ctx context.Context, req *payment.PaymentRequest) (*payment.PaymentResponse, error) {
-	p, err := h.useCase.CreatePayment(req.GetOrderId(), req.GetAmount(), req.GetIdempotencyKey())
+	customerEmail := req.GetCustomerEmail()
+	if customerEmail == "" {
+		return nil, status.Error(codes.InvalidArgument, "customer email is required")
+	}
+
+	p, err := h.useCase.CreatePayment(req.GetOrderId(), req.GetAmount(), req.GetIdempotencyKey(), customerEmail)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "failed to process payment: %v", err)
 	}

@@ -1,31 +1,100 @@
-version: "3.8"
-
 services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
   orders-db:
     image: postgres:16-alpine
     container_name: orders-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 0000
+      POSTGRES_PASSWORD: "0000"
       POSTGRES_DB: ordersAP2_db
     ports:
       - "5433:5432"
     volumes:
       - orders-data:/var/lib/postgresql/data
       - ./order-service/migrations/001_create_orders.sql:/docker-entrypoint-initdb.d/001_create_orders.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ordersAP2_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   payments-db:
     image: postgres:16-alpine
     container_name: payments-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 0000
+      POSTGRES_PASSWORD: "0000"
       POSTGRES_DB: paymentsAP2_db
     ports:
       - "5434:5432"
     volumes:
       - payments-data:/var/lib/postgresql/data
       - ./payment-service/migrations/001_create_payments.sql:/docker-entrypoint-initdb.d/001_create_payments.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paymentsAP2_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment-service:
+    build:
+      context: ./payment-service
+    container_name: payment-service
+    environment:
+      DB_HOST: payments-db
+      DB_USER: postgres
+      DB_PASSWORD: "0000"
+      DB_NAME: paymentsAP2_db
+      GRPC_PORT: "50051"
+      NATS_URL: nats://nats:4222
+    ports:
+      - "50051:50051"
+    depends_on:
+      payments-db:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    restart: on-failure
+
+  order-service:
+    build:
+      context: ./order-service
+    container_name: order-service
+    environment:
+      DB_HOST: orders-db
+      DB_USER: postgres
+      DB_PASSWORD: "0000"
+      DB_NAME: ordersAP2_db
+      REST_PORT: "8080"
+      GRPC_PORT: "50052"
+      PAYMENT_GRPC_URL: payment-service:50051
+    ports:
+      - "8080:8080"
+      - "50052:50052"
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      payment-service:
+        condition: service_started
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification-service
+    environment:
+      NATS_URL: nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_started
+    restart: on-failure
 
 volumes:
   orders-data:

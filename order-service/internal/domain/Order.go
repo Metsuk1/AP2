@@ -5,6 +5,7 @@ import "time"
 type Order struct {
 	ID             string
 	CustomerID     string
+	CustomerEmail  string
 	ItemName       string
 	Amount         int64  // Amount in cents
 	Status         string // "Pending", "Paid", "Failed", "Cancelled"
@@ -20,5 +21,5 @@ type OrderRepository interface {
 }
 
 type PaymentClient interface {
-	RequestPayment(orderID string, amount int64, idempotencyKey string) (string, error)
+	RequestPayment(orderID string, amount int64, idempotencyKey string, customerEmail string) (string, error)
 }

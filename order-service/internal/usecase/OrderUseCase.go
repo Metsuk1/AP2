@@ -23,7 +23,7 @@ func NewOrderUseCase(repo domain.OrderRepository, payment domain.PaymentClient, 
 	}
 }
 
-func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, idempotencyKey string) (*domain.Order, error) {
+func (uc *OrderUseCase) CreateOrder(customerID, customerEmail, itemName string, amount int64, idempotencyKey string) (*domain.Order, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than 0")
 	}
@@ -39,6 +39,7 @@ func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, i
 	order := &domain.Order{
 		ID:             uuid.New().String(),
 		CustomerID:     customerID,
+		CustomerEmail:  customerEmail,
 		ItemName:       itemName,
 		Amount:         amount,
 		Status:         "Pending",
@@ -50,7 +51,7 @@ func (uc *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, i
 		return nil, err
 	}
 
-	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount, idempotencyKey)
+	paymentStatus, err := uc.payment.RequestPayment(order.ID, order.Amount, idempotencyKey, order.CustomerEmail)
 	if err != nil {
 		order.Status = "Failed"
 		uc.UpdateStatus(order.ID, order.Status)
